@@ -56,37 +56,44 @@ def dwtviz(signals, wavelet='db1', level=None, approx=None, cmap_name='seismic',
 
     outer_gs = grd.GridSpec(nrows, ncols, hspace=.3, wspace=.1)
 
-    for i, signal in enumerate(signals):
-        row = i // 2
-        col = i % 2
-
-        gs = grd.GridSpecFromSubplotSpec(2, 1,
-                    subplot_spec=outer_gs[row, col], hspace=0.2)
-        
-        if decomposition == 'dwt':
-            coefs = pywt.wavedec(signal[1] if isinstance(signal, tuple) else signal, wavelet, level=level)
-            if not approx:
-                coefs = coefs[1:]
-        elif decomposition == 'swt':
-            coefs = pywt.swt(signal[1] if isinstance(signal, tuple) else signal, wavelet, level=level)
-            coefs = [c[1] for c in coefs] 
-
-        max_level = pywt.dwt_max_level(len(signal[1] if isinstance(signal, tuple) else signal), pywt.Wavelet(wavelet).dec_len)
-
-        heatmap_ax = plt.subplot(gs[0, 0])
-        signal_ax = plt.subplot(gs[1, 0])
-
-        dwt_heatmap(coefs, heatmap_ax, cmap_name, approx, max_level, signal_ax)
-        if type(signal) == tuple:
-            signal_ax.plot(*signal)
-        else:
-            signal_ax.plot(signal)
-
-        signal_ax.set_xlim([min(signal[0]), max(signal[0])] if type(signal) == tuple else [0, len(signal) - 1])
-        signal_ax.set_xticks([])
-
-        heatmap_ax.set_title(i)
+    add_to_plot_p = partial(add_to_plot, outer_gs, wavelet, level, approx,
+                            decomposition, cmap_name)
+    with Pool(cpu_count() - 1) as p:
+        gses = p.starmap(add_to_plot_p, enumerate(signals))
     return f
+
+def add_to_plot(outer_gs, wavelet, level, approx, decomposition, cmap_name,
+                i, signal):
+    row = i // 2
+    col = i % 2
+
+    gs = grd.GridSpecFromSubplotSpec(2, 1,
+                subplot_spec=outer_gs[row, col], hspace=0.2)
+
+    if decomposition == 'dwt':
+        coefs = pywt.wavedec(signal[1] if isinstance(signal, tuple) else signal, wavelet, level=level)
+        if not approx:
+            coefs = coefs[1:]
+    elif decomposition == 'swt':
+        coefs = pywt.swt(signal[1] if isinstance(signal, tuple) else signal, wavelet, level=level)
+        coefs = [c[1] for c in coefs] 
+
+    max_level = pywt.dwt_max_level(len(signal[1] if isinstance(signal, tuple) else signal), pywt.Wavelet(wavelet).dec_len)
+
+    heatmap_ax = plt.subplot(gs[0, 0])
+    signal_ax = plt.subplot(gs[1, 0])
+
+    dwt_heatmap(coefs, heatmap_ax, cmap_name, approx, max_level, signal_ax)
+    if type(signal) == tuple:
+        signal_ax.plot(*signal)
+    else:
+        signal_ax.plot(signal)
+
+    signal_ax.set_xlim([min(signal[0]), max(signal[0])] if type(signal) == tuple else [0, len(signal) - 1])
+    signal_ax.set_xticks([])
+
+    heatmap_ax.set_title(i)
+    return gs
 
 def dwt_heatmap(coefs, ax, cmap_name, approx, max_level, sig_ax):
     ax.set_xticks(np.array(list(range(0, len(coefs[0]), 5))) / len(coefs[0]))
