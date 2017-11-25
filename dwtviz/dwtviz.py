@@ -164,13 +164,13 @@ def dwtviz(signals,
 def dwt_heatmap(coefs, ax, cmap_name, approx, max_level, sig_ax, cbar_limit,
                 xticks, yticks):
     if xticks:
-        ax.set_xticks(np.array(list(range(0, len(coefs[0]), 5))) / len(coefs[0]))
+        ax.set_xticks(np.array(list(range(0, len(coefs[0]), 5))) / float(len(coefs[0])))
         ax.set_xticklabels(range(0, len(coefs[-1]), 5))
     else:
         ax.set_xticks([])
 
     if yticks:
-        ax.set_yticks([(i / len(coefs)) - (1 / (len(coefs) * 2))
+        ax.set_yticks([(1. * i / len(coefs)) - (1. / (len(coefs) * 2))
                     for i in range(len(coefs), 0, -1)])
 
         if not approx and len(coefs) == max_level:
@@ -195,9 +195,9 @@ def dwt_heatmap(coefs, ax, cmap_name, approx, max_level, sig_ax, cbar_limit,
     colbar_axis = colbar.make_axes([ax, sig_ax], 'right')
     colbar.ColorbarBase(colbar_axis[0], cmap, norm)
 
-    height = 1 / len(coefs)
+    height = 1. / len(coefs)
     for level, coef_level in enumerate(coefs):
-        width = 1 / len(coef_level)
+        width = 1. / len(coef_level)
         for n, coef in enumerate(coef_level):
             bottom_left = (0 + (n * width), 1 - ((level + 1) * height))
             color = cmap(norm(coef))
